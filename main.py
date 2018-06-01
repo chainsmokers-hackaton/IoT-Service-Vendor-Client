@@ -81,10 +81,11 @@ class TransactionThread(threading.Thread):
         self.hash_wrapper = HashWrapper()
 
     def run(self):
-        hash_value = self.hash_wrapper.get_total_hash(self.config.get_root())
-        print(hash_value)
-        # add make transaction
-        time.sleep(self.config.get_unit_time())
+        while True:
+            hash_value = self.hash_wrapper.get_total_hash(self.config.get_root())
+            print(hash_value)
+            # add make transaction
+            time.sleep(self.config.get_unit_time())
 
 class ResponseToServer(threading.Thread):
     def __init__(self):
@@ -106,15 +107,11 @@ class ResponseToServer(threading.Thread):
 
 class Main:
     def __init__(self):
-        # transaction_thread = TransactionThread()
-        # transaction_thread.start()
+        transaction_thread = TransactionThread()
+        transaction_thread.start()
 
         response_to_server_thread = ResponseToServer()
         response_to_server_thread.start()
-
-        # threading.Timer()
-        # temp = HashWrapper().get_total_hash(self.config.get_root())
-        # temp = HashWrapper().get_each_hash(self.config.get_root())
 
 if __name__ == "__main__":
     Main()
