@@ -1,5 +1,7 @@
 {
   "mode": "debug",
   "root_path": "./root",
-  "unit_time": "10H"
+  "unit_time": "5s",
+  "host_ip": "127.0.0.1",
+  "host_port": "9797"
 }
