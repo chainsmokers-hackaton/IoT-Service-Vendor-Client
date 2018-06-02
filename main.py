@@ -6,7 +6,16 @@ import threading
 import socket
 import pickle
 
+class LogWrapper:
+    logger = None
+    def __init__(self, name):
+        pass
+
+    def get_logger(self):
+        return self.logger
+
 CONFIG_PATH = "./config.json"
+logger = LogWrapper("IoTServiceVendorClient").get_logger()
 
 class ConfigParser:
     def __init__(self):
@@ -43,12 +52,22 @@ class HashWrapper:
     def __init__(self):
         pass
 
+    @staticmethod
+    def check_elf_file(file_path):
+        fd = open(file_path, "rb")
+        signature = fd.read(4)
+        if signature == b"\x7fELF":
+            return True
+        else:
+            return False
+
     def get_total_hash(self, root_path):
         hash_md5 = hashlib.md5()
         for path, dir, files in os.walk(root_path):
             for file in files:
                 file_path = "%s/%s" % (path, file)
                 try:
+                    if self.check_elf_file(file_path) == False: continue
                     fd = open(file_path, "rb")
                 except Exception as e:
                     continue
@@ -64,6 +83,7 @@ class HashWrapper:
             for file in files:
                 file_path = "%s/%s" % (path, file)
                 try:
+                    if self.check_elf_file(file_path) == False: continue
                     fd = open(file_path, "rb")
                 except Exception as e:
                     continue
@@ -71,7 +91,8 @@ class HashWrapper:
                     hash_md5 = hashlib.md5()
                     for chunk in iter(lambda: fd.read(4096), b""):
                         hash_md5.update(chunk)
-                    hash_list.append(hash_md5.hexdigest())
+
+                    hash_list.append((file_path, hash_md5.hexdigest()))
         return hash_list
 
 class TransactionThread(threading.Thread):
@@ -84,13 +105,32 @@ class TransactionThread(threading.Thread):
         while True:
             hash_value = self.hash_wrapper.get_total_hash(self.config.get_root())
             print(hash_value)
-            # add make transaction
+            # add function to make transaction
             time.sleep(self.config.get_unit_time())
 
 class ResponseToServer(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.config = ConfigParser()
+        self.hash_wrapper = HashWrapper()
+
+    def collect_black_hash(self, white_hash_list):
+        black_hash_list = list()
+        current_hash_list = self.hash_wrapper.get_each_hash(self.config.get_root())
+
+        for current_file in current_hash_list:
+            for white_file in white_hash_list:
+                if current_file[1] != white_file:
+                    if len(black_hash_list) == 0:
+                        black_hash_list.append(current_file)
+
+                    for black_bin in black_hash_list:
+                        if current_file[1] == black_bin[1]: continue
+                        black_hash_list.append(current_file)
+                white_hash_list.remove(white_file)
+
+        # send file to server
+
 
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -102,8 +142,14 @@ class ResponseToServer(threading.Thread):
                 operator = conn.recv(1048576)
                 if len(operator) > 0:
                     operator = pickle.loads(operator)
-                    print(operator)
-                # if operator == ""
+                    if "operator" in operator:
+                        operation = operator.pop("operator")
+
+                        if operation == "get_black_bin":
+                            self.collect_black_hash(operator["white_hash_list"])
+
+
+
 
 class Main:
     def __init__(self):
