@@ -3,5 +3,6 @@
   "root_path": "./root",
   "unit_time": "5s",
   "host_ip": "127.0.0.1",
-  "host_port": "9797"
+  "host_port": "9797",
+  "server_url": "http://127.0.0.1:8000/upload_file/"
 }

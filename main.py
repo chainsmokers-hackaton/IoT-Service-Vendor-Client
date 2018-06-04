@@ -5,6 +5,7 @@ import time
 import threading
 import socket
 import pickle
+import requests
 
 class LogWrapper:
     logger = None
@@ -47,6 +48,10 @@ class ConfigParser:
         if "host_port" in self.config:
             return self.config["host_port"]
 
+    def get_server_url(self):
+        if "server_url" in self.config:
+            return self.config["server_url"]
+
 class HashWrapper:
 
     def __init__(self):
@@ -74,7 +79,7 @@ class HashWrapper:
                 else:
                     for chunk in iter(lambda: fd.read(4096), b""):
                         hash_md5.update(chunk)
-        print(hash_md5.hexdigest())
+        print(hash_md5.hexdigest()) # add log
         return hash_md5.hexdigest()
 
     def get_each_hash(self, root_path):
@@ -127,9 +132,17 @@ class ResponseToServer(threading.Thread):
                     for black_bin in black_hash_list:
                         if current_file[1] == black_bin[1]: continue
                         black_hash_list.append(current_file)
-                white_hash_list.remove(white_file)
 
-        # send file to server
+        for black_file in black_hash_list:
+            with open(black_file[0], "rb") as file:
+                file_info = {"file":file}
+                result = requests.post(self.config.get_server_url(), files=file_info)
+
+                if result.status_code == 200:
+                    print("") # add log to success
+                else:
+                    print("") # add log to fail
+
 
 
     def run(self):
@@ -142,6 +155,7 @@ class ResponseToServer(threading.Thread):
                 operator = conn.recv(1048576)
                 if len(operator) > 0:
                     operator = pickle.loads(operator)
+                    
                     if "operator" in operator:
                         operation = operator.pop("operator")
 
